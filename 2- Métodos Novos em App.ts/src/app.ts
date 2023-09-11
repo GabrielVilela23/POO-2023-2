@@ -52,3 +52,37 @@ export class App {
         rent.dateReturned = new Date();
     }
 }
+
+listUsers(): string {
+        if (this.users.length === 0) {
+            return "Não há usuários cadastrados.";
+        }
+        let userList = "Lista de Usuários:\n";
+        this.users.forEach((user, index) => {
+            userList += `${index + 1}. Nome: ${user.name}, Email: ${user.email}\n`;
+        });
+        return userList;
+    }
+
+    listRents(): string {
+        if (this.rents.length === 0) {
+            return "Não há reservas/aluguéis cadastrados.";
+        }
+        let rentList = "Lista de Reservas/Aluguéis:\n";
+        this.rents.forEach((rent, index) => {
+            rentList += `${index + 1}. Usuário: ${rent.user.name}, Bicicleta: ${rent.bike.name}, Data Início: ${rent.dateFrom.toDateString()}, Data Fim: ${rent.dateTo.toDateString()}\n`;
+        });
+        return rentList;
+    }
+
+    listBikes(): string {
+        if (this.bikes.length === 0) {
+            return "Não há bicicletas cadastradas.";
+        }
+        let bikeList = "Lista de Bicicletas:\n";
+        this.bikes.forEach((bike, index) => {
+            bikeList += `${index + 1}. Nome: ${bike.name}, Tipo: ${bike.type}, Descrição: ${bike.description}\n`;
+        });
+        return bikeList;
+    }
+}

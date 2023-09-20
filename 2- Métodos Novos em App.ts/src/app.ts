@@ -1,88 +1,118 @@
 import { Bike } from "./bike";
+import { Crypt } from "./crypt";
 import { Rent } from "./rent";
 import { User } from "./user";
+import { Location } from "./location";
+import crypto from 'crypto'
 
 export class App {
     users: User[] = []
     bikes: Bike[] = []
     rents: Rent[] = []
+    crypt: Crypt = new Crypt()
 
-    findUser(email: string): User | undefined {
-        return this.users.find(user => user.email === email);
+    findUser(email: string): User {
+        return this.users.find(user => user.email === email)
     }
 
-    registerUser(user: User): void {
-        if (this.users.some(existingUser => existingUser.email === user.email)) {
-            throw new Error('Duplicate user.');
+    async registerUser(user: User): Promise<string> {
+        for (const rUser of this.users) {
+            if (rUser.email === user.email) {
+                throw new Error('Duplicate user.')
+            }
         }
-        this.users.push(user);
+        const newId = crypto.randomUUID()
+        user.id = newId
+        const encryptedPassword = await this.crypt.encrypt(user.password)
+        user.password = encryptedPassword
+        this.users.push(user)
+        return newId
     }
 
-    registerBike(bike: Bike): void {
-        this.bikes.push(bike);
+    async authenticate(userEmail: string, password: string): Promise<boolean> {
+        const user = this.findUser(userEmail)
+        if (!user) throw new Error('User not found.')
+        return await this.crypt.compare(password, user.password)
+    }
+
+    registerBike(bike: Bike): string {
+        const newId = crypto.randomUUID()
+        bike.id = newId
+        this.bikes.push(bike)
+        return newId
     }
 
     removeUser(email: string): void {
-        const userIndex = this.users.findIndex(user => user.email === email);
+        const userIndex = this.users.findIndex(user => user.email === email)
         if (userIndex !== -1) {
-            this.users.splice(userIndex, 1);
+            this.users.splice(userIndex, 1)
+            return
         }
+        throw new Error('User does not exist.')
+    }
+    
+    rentBike(bikeId: string, userEmail: string): void {
+        const bike = this.bikes.find(bike => bike.id === bikeId)
+        if (!bike) {
+            throw new Error('Bike not found.')
+        }
+        if (!bike.available) {
+            throw new Error('Unavailable bike.')
+        }
+        const user = this.findUser(userEmail)
+        if (!user) {
+            throw new Error('User not found.')
+        }
+        bike.available = false
+        const newRent = new Rent(bike, user, new Date())
+        this.rents.push(newRent)
     }
 
-    rentBike(user: User, bike: Bike, startDate: Date, endDate: Date): Rent {
-        const existingUser = this.users.find(u => u.email === user.email);
-        if (!existingUser) {
-            throw new Error('User not found.');
-        }
-
-        if (!this.bikes.includes(bike)) {
-            throw new Error('Bike not found.');
-        }
-
-        const rent = Rent.create(this.rents, bike, existingUser, startDate, endDate);
-        this.rents.push(rent);
-        return rent;
+    returnBike(bikeId: string, userEmail: string): number {
+        const now = new Date()
+        const rent = this.rents.find(rent =>
+            rent.bike.id === bikeId &&
+            rent.user.email === userEmail &&
+            !rent.end
+        )
+        if (!rent) throw new Error('Rent not found.')
+        rent.end = now
+        rent.bike.available = true
+        const hours = diffHours(rent.end, rent.start)
+        return hours * rent.bike.rate
     }
 
-    returnBike(rent: Rent): void {
-        const rentIndex = this.rents.findIndex(existingRent => existingRent === rent);
-        if (rentIndex !== -1) {
-            this.rents.splice(rentIndex, 1);
-        }
-        rent.dateReturned = new Date();
+    listUsers(): User[] {
+        return this.users
+    }
+
+    listBikes(): Bike[] {
+        return this.bikes
+    }
+
+    listRents(): Rent[] {
+        return this.rents
+    }
+
+    moveBikeTo(bikeId: string, location: Location) {
+        const bike = this.bikes.find(bike => bike.id === bikeId)
+        bike.location.latitude = location.latitude
+        bike.location.longitude = location.longitude
     }
 }
 
-listUsers(): string {
-        if (this.users.length === 0) {
-            return "Não há usuários cadastrados.";
-        }
-        let userList = "Lista de Usuários:\n";
-        this.users.forEach((user, index) => {
-            userList += `${index + 1}. Nome: ${user.name}, Email: ${user.email}\n`;
-        });
-        return userList;
-    }
+function diffHours(dt2: Date, dt1: Date) {
+  var diff = (dt2.getTime() - dt1.getTime()) / 1000;
+  diff /= (60 * 60);
+  return Math.abs(diff);
+}
 
-    listRents(): string {
-        if (this.rents.length === 0) {
-            return "Não há reservas/aluguéis cadastrados.";
-        }
-        let rentList = "Lista de Reservas/Aluguéis:\n";
-        this.rents.forEach((rent, index) => {
-            rentList += `${index + 1}. Usuário: ${rent.user.name}, Bicicleta: ${rent.bike.name}, Data Início: ${rent.dateFrom.toDateString()}, Data Fim: ${rent.dateTo.toDateString()}\n`;
-        });
-        return rentList;
-    }
-
-    listBikes(): string {
-        if (this.bikes.length === 0) {
-            return "Não há bicicletas cadastradas.";
-        }
-        let bikeList = "Lista de Bicicletas:\n";
-        this.bikes.forEach((bike, index) => {
-            bikeList += `${index + 1}. Nome: ${bike.name}, Tipo: ${bike.type}, Descrição: ${bike.description}\n`;
-        });
-        return bikeList;
-    }
+moveBikeTo(bikeId: string, location: Location) {
+  const bike = this.bikes.find(bike => bike.id === bikeId);
+  if (!bike) {
+    throw new Error('Bike not found.');
+  } else {
+    bike.location.latitude = location.latitude;
+    bike.location.longitude = location.longitude;
+  }
 }

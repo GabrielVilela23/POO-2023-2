@@ -18,6 +18,8 @@ async function main() {
     clock.tick(1000 * 60 * 65)
     console.log(app.returnBike(bike.id, user1.email))
     console.log('Bike disponível: ', bike.available)
+
+//teste teste
 }
 
 main()

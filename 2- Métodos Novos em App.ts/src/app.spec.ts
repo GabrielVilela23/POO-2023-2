@@ -31,6 +31,85 @@ describe('App', () => {
         expect(bike.location.longitude).toEqual(newYork.longitude)
     })
 
-    it('should throw an exception when trying to move an unregistered bike', () => {
-    })
+   it('should throw bike not found error when trying to move an unregistered bike', () => {
+    const app = new App()
+    const newYork = new Location(40.753056, -73.983056)
+    expect(() => {
+      app.moveBikeTo('fake-id', newYork)
+    }).toThrow(BikeNotFoundError)
+  })
+
+  it('should correctly handle bike rent', async () => {
+    const app = new App()
+    const user = new User('Jose', 'jose@mail.com', '1234')
+    await app.registerUser(user)
+    const bike = new Bike('caloi mountainbike', 'mountain bike',
+      1234, 1234, 100.0, 'My bike', 5, [])
+    app.registerBike(bike)
+    app.rentBike(bike.id, user.email)
+    expect(app.rents.length).toEqual(1)
+    expect(app.rents[0].bike.id).toEqual(bike.id)
+    expect(app.rents[0].user.id).toEqual(user.id)
+  })
+
+  it('should throw unavailable bike error when trying to rent an unavailable bike', async () => {
+    const app = new App()
+    const user = new User('Jose', 'jose@mail.com', '1234')
+    await app.registerUser(user)
+    const bike = new Bike('caloi mountainbike', 'mountain bike',
+      1234, 1234, 100.0, 'My bike', 5, [])
+    app.registerBike(bike)
+    app.rentBike(bike.id, user.email)
+    expect(() => {
+      app.rentBike(bike.id, user.email)
+    }).toThrow(UnavailableBikeError)
+  })
+
+  it('should throw user not found error when user is not found', () => {
+    const app = new App()
+    expect(() => {
+      app.findUser('fake@mail.com')
+    }).toThrow(UserNotFoundError)
+  })
+
+  it ('should throw bike not found error when bike is not found', () => {
+    const app = new App()
+    expect (() =>{
+      app.findBike('2171')
+    }) .toThrom(BikeNotFoundError)
+  })
+
+  
+  it('should register a bike', () => {
+    const app = new App();
+    const bike = new Bike('caloi mountainbike', 'mountain bike', 1234, 1234, 100.0, 'My bike', 5, []);
+    const bikeId = app.registerBike(bike);
+    
+    const registeredBike = app.findBike(bikeId);
+
+    expect(registeredBike).toEqual(bike);
+  });
+
+  it('should return a bike', () => {
+    const app = new App();
+    const bike = new Bike('caloi mountainbike', 'mountain bike', 1234, 1234, 100.0, 'My bike', 5, []);
+    const bikeId = app.registerBike(bike);
+
+    const returnedAmount = app.returnBike(bikeId, 'user@mail.com');
+
+    expect(returnedAmount).toEqual(0);
+  });
+
+  it('should remove a user', () => {
+    const app = new App();
+    const user = new User('John', 'john@mail.com', 'password');
+    app.registerUser(user);
+
+    app.removeUser('john@mail.com');
+
+    expect(() => {
+      app.findUser('john@mail.com');
+    }).toThrow(UserNotFoundError); 
+  })
+    
 })
